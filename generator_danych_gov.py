@@ -1,0 +1,146 @@
+import hashlib
+import uuid
+from datetime import datetime
+from xml.etree.ElementTree import Element, SubElement, tostring
+from xml.dom import minidom
+
+# --- SEKCJA KONFIGURACYJNA ---
+# Uzupełnij poniższe dane zgodnie z Twoją inwestycją.
+CONFIG = {
+    "DEWELOPER_NAZWA": "Moja Firma Deweloperska S.A.",
+    "INWESTYCJA_NAZWA": "Osiedle Słoneczne",
+    "ROK_ZBIORU": "2025",
+    # Unikalny identyfikator Twojej inwestycji (może być dowolny, ale stały)
+    "INWESTYCJA_ID": "osiedle_sloneczne_krakow",
+    # Adres URL Twojej strony internetowej z informacjami o inwestycji
+    "INWESTYCJA_URL": "https://www.mojadeweloperka.pl/osiedle-sloneczne",
+    # Bazowy adres URL, pod którym będą dostępne pliki z danymi (Excel/CSV)
+    # Skrypt doklei do niego nazwę pliku z datą, np. /ceny-2025-09-18.xlsx
+    "DANE_BASE_URL": "https://www.mojadeweloperka.pl/dane-gov/",
+    # Nazwa pliku wyjściowego XML (bez rozszerzenia)
+    "XML_FILENAME": "dane_deweloper_sloneczne",
+}
+# -----------------------------
+
+def generate_xml_content():
+    """
+    Generuje zawartość pliku XML zgodnie ze schematem dane.gov.pl dla deweloperów.
+    """
+    today = datetime.now()
+    today_str = today.strftime("%Y-%m-%d")
+    today_str_compact = today.strftime("%Y%m%d")
+
+    # Nazwa codziennego pliku z danymi (np. ceny-2025-09-18.xlsx)
+    daily_data_filename = f"ceny-{CONFIG['INWESTYCJA_ID']}-{today_str}.xlsx"
+    # Pełny, publiczny URL do pliku z danymi
+    daily_data_url = CONFIG['DANE_BASE_URL'] + daily_data_filename
+
+    # --- Główny element - <p:datasets> ---
+    # Atrybut xmlns:p jest opcjonalny dla generowania, ale dla pełnej zgodności
+    # można go dodać na etapie finalizacji pliku.
+    root = Element('p:datasets')
+
+    # --- Zbiór danych - <dataset> ---
+    dataset = SubElement(root, 'dataset', status='published')
+
+    # Identyfikator zbioru - stały dla całej inwestycji
+    SubElement(dataset, 'extIdent').text = f"dataset_{CONFIG['INWESTYCJA_ID']}"
+    
+    title_dataset = SubElement(dataset, 'title')
+    SubElement(title_dataset, 'polish').text = f"Ceny ofertowe mieszkań dewelopera {CONFIG['DEWELOPER_NAZWA']} w {CONFIG['ROK_ZBIORU']} r."
+    SubElement(title_dataset, 'english').text = f"Offer prices of apartments of developer {CONFIG['DEWELOPER_NAZWA']} in {CONFIG['ROK_ZBIORU']}."
+    
+    description_dataset = SubElement(dataset, 'description')
+    desc_text_pl = (f"Zbiór danych zawiera informacje o cenach ofertowych mieszkań dewelopera {CONFIG['DEWELOPER_NAZWA']} "
+                    f"udostępniane zgodnie z art. 19b. ust. 1 Ustawy z dnia 20 maja 2021 r. o ochronie praw nabywcy lokalu "
+                    f"mieszkalnego lub domu jednorodzinnego oraz Deweloperskim Funduszu Gwarancyjnym (Dz. U. z 2024 r. poz. 695).")
+    SubElement(description_dataset, 'polish').text = desc_text_pl
+    SubElement(description_dataset, 'english').text = desc_text_pl # Używamy tego samego opisu dla uproszczenia
+    
+    SubElement(dataset, 'url').text = CONFIG['INWESTYCJA_URL']
+    SubElement(dataset, 'categories').text = 'ECON' # Wymagana kategoria [15]
+    
+    tags = SubElement(dataset, 'tags')
+    SubElement(tags, 'tag').text = 'deweloper'
+
+    # --- Częstotliwość aktualizacji - kluczowe dla obowiązku codziennego raportowania [13] ---
+    SubElement(dataset, 'updateFrequency').text = 'daily'
+    
+    # --- Wymagane flagi boolean ---
+    SubElement(dataset, 'hasDynamicData').text = 'false'
+    SubElement(dataset, 'hasHighValueData').text = 'true' # Wymagane [13]
+    SubElement(dataset, 'hasHighValueDataFromEuropeanCommissionList').text = 'false'
+    SubElement(dataset, 'hasResearchData').text = 'false'
+
+    # --- Lista zasobów - <resources> ---
+    resources = SubElement(dataset, 'resources')
+    
+    # --- Zasób - <resource> - TEN ELEMENT JEST GENEROWANY CODZIENNIE ---
+    resource = SubElement(resources, 'resource', status='published')
+
+    # Unikalny identyfikator dla każdego dziennego raportu [5, 7]
+    SubElement(resource, 'extIdent').text = f"resource_{CONFIG['INWESTYCJA_ID']}_{today_str_compact}"
+    
+    # URL do pliku z danymi na dany dzień [21]
+    SubElement(resource, 'url').text = daily_data_url
+
+    title_resource = SubElement(resource, 'title')
+    SubElement(title_resource, 'polish').text = f"Ceny ofertowe mieszkań dewelopera {CONFIG['DEWELOPER_NAZWA']} {today_str}"
+    SubElement(title_resource, 'english').text = f"Offer prices for developer's apartments {CONFIG['DEWELOPER_NAZWA']} {today_str}"
+
+    description_resource = SubElement(resource, 'description')
+    desc_res_text_pl = (f"Dane dotyczące cen ofertowych mieszkań dewelopera {CONFIG['DEWELOPER_NAZWA']} udostępnione {today_str} "
+                        f"zgodnie z art. 19b. ust. 1 Ustawy.")
+    SubElement(description_resource, 'polish').text = desc_res_text_pl
+    SubElement(description_resource, 'english').text = desc_res_text_pl
+
+    SubElement(resource, 'availability').text = 'local' # Rekomendowane [22]
+    SubElement(resource, 'dataDate').text = today_str # Data, której dotyczą dane [22]
+
+    special_signs = SubElement(resource, 'specialSigns')
+    SubElement(special_signs, 'specialSign').text = 'X' # Wymagany znak umowny [16]
+
+    # --- Pozostałe wymagane flagi boolean dla zasobu ---
+    SubElement(resource, 'hasDynamicData').text = 'false'
+    SubElement(resource, 'hasHighValueData').text = 'true'
+    SubElement(resource, 'hasHighValueDataFromEuropeanCommissionList').text = 'false'
+    SubElement(resource, 'hasResearchData').text = 'false'
+    SubElement(resource, 'containsProtectedData').text = 'false'
+
+    # Konwersja do stringa i formatowanie dla czytelności
+    xml_string = tostring(root, 'utf-8')
+    parsed_string = minidom.parseString(xml_string)
+    pretty_xml = parsed_string.toprettyxml(indent="  ", encoding="utf-8")
+    
+    return pretty_xml
+
+def calculate_md5(file_content):
+    """
+    Oblicza sumę kontrolną MD5 dla zawartości pliku.
+    """
+    md5_hash = hashlib.md5(file_content).hexdigest()
+    return md5_hash
+
+if __name__ == "__main__":
+    # 1. Wygeneruj zawartość pliku XML
+    xml_data = generate_xml_content()
+    
+    # 2. Zapisz plik XML
+    xml_file_path = f"{CONFIG['XML_FILENAME']}.xml"
+    with open(xml_file_path, "wb") as f:
+        f.write(xml_data)
+    print(f"✅ Plik XML został wygenerowany: {xml_file_path}")
+
+    # 3. Oblicz sumę kontrolną MD5 dla zapisanego pliku XML
+    md5_sum = calculate_md5(xml_data)
+    
+    # 4. Zapisz plik MD5
+    md5_file_path = f"{CONFIG['XML_FILENAME']}.md5"
+    with open(md5_file_path, "w") as f:
+        f.write(md5_sum)
+    print(f"✅ Plik MD5 został wygenerowany: {md5_file_path}")
+    print("\n---")
+    print("Kolejne kroki:")
+    print("1. Umieść plik z danymi (np. Excel/CSV) na swoim serwerze pod adresem URL wygenerowanym w pliku XML.")
+    print(f"   -> Oczekiwany URL: {CONFIG['DANE_BASE_URL']}ceny-{CONFIG['INWESTYCJA_ID']}-{datetime.now().strftime('%Y-%m-%d')}.xlsx")
+    print(f"2. Umieść wygenerowane pliki '{xml_file_path}' oraz '{md5_file_path}' na serwerze w lokalizacji zgłoszonej do administratora portalu dane.gov.pl.")
