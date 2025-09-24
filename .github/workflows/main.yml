@@ -7,7 +7,7 @@ from xml.dom import minidom
 # --- SEKCJA KONFIGURACYJNA ---
 # Uzupełnij poniższe dane zgodnie z Twoją inwestycją.
 CONFIG = {
-    "DEWELOPER_NAZWA": "Moja Firma Deweloperska S.A.",
+    "DEWELOPER_NAZWA": "MWRW",
     "INWESTYCJA_NAZWA": "Osiedle Słoneczne",
     "ROK_ZBIORU": "2025",
     # Unikalny identyfikator Twojej inwestycji (może być dowolny, ale stały)
