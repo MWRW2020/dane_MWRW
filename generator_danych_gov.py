@@ -7,7 +7,7 @@ from xml.dom import minidom
 # --- SEKCJA KONFIGURACYJNA ---
 # Uzupełnij poniższe dane zgodnie z Twoją inwestycją.
 CONFIG = {
-    "DEWELOPER_NAZWA": "MWRW Sp. z o.o.",
+    "DEWELOPER_NAZWA": "MWRW",
     "INWESTYCJA_NAZWA": "Osiedle Słoneczne",
     "ROK_ZBIORU": "2025",
     # Unikalny identyfikator Twojej inwestycji (może być dowolny, ale stały)
@@ -144,4 +144,5 @@ if __name__ == "__main__":
     print("1. Umieść plik z danymi (np. Excel/CSV) na swoim serwerze pod adresem URL wygenerowanym w pliku XML.")
     print(f"   -> Oczekiwany URL: {CONFIG['DANE_BASE_URL']}ceny-{CONFIG['INWESTYCJA_ID']}-{datetime.now().strftime('%Y-%m-%d')}.xlsx")
     print(f"2. Umieść wygenerowane pliki '{xml_file_path}' oraz '{md5_file_path}' na serwerze w lokalizacji zgłoszonej do administratora portalu dane.gov.pl.")
+
 
