@@ -1,26 +1,28 @@
 import hashlib
 import uuid
 from datetime import datetime
-from xml.etree.ElementTree import Element, SubElement, tostring
+from xml.etree.ElementTree import Element, SubElement, tostring, register_namespace
 from xml.dom import minidom
 
 # --- SEKCJA KONFIGURACYJNA ---
 # Uzupełnij poniższe dane zgodnie z Twoją inwestycją.
 CONFIG = {
-    "DEWELOPER_NAZWA": "MWRW Sp. z o.o.",
-    "INWESTYCJA_NAZWA": "Brzozowy Zakątek",
+    "DEWELOPER_NAZWA": "Moja Firma Deweloperska S.A.",
+    "INWESTYCJA_NAZWA": "Osiedle Słoneczne",
     "ROK_ZBIORU": "2025",
-    # Unikalny identyfikator Twojej inwestycji (może być dowolny, ale stały)
-    "INWESTYCJA_ID": "brzozowy_zakatek_kliny",
-    # Adres URL Twojej strony internetowej z informacjami o inwestycji
-    "INWESTYCJA_URL": "https://www.mwrw.net/kliny",
-    # Bazowy adres URL, pod którym będą dostępne pliki z danymi (Excel/CSV)
-    # Skrypt doklei do niego nazwę pliku z datą, np. /dane_wzor.xlsx
-    "DANE_BASE_URL": "https://mwrw2020.github.io/dane_MWRW/", # Proszę upewnić się, że ten adres jest poprawny!
-    # Nazwa pliku wyjściowego XML (bez rozszerzenia)
-    "XML_FILENAME": "dane_deweloper_brzozowy_zakatek",
+    "INWESTYCJA_ID": "osiedle_sloneczne_krakow",
+    "INWESTYCJA_URL": "https://www.mojadeweloperka.pl/osiedle-sloneczne",
+    "DANE_BASE_URL": "https://mwrw2020.github.io/dane_MWRW/",
+    "XML_FILENAME": "dane_deweloper_sloneczne",
 }
 # -----------------------------
+
+# --- POPRAWKA: Rejestracja przestrzeni nazw (namespace) dla prefiksu 'p' ---
+# To jest kluczowy element, który naprawia błąd "unbound prefix".
+# Informuje on parser XML, że prefiks 'p:' odnosi się do oficjalnego schematu dane.gov.pl.
+SCHEMA_URL = "https://www.dane.gov.pl/static/xml/otwarte_dane_latest.xsd"
+register_namespace('p', SCHEMA_URL)
+# -------------------------------------------------------------------------
 
 def generate_xml_content():
     """
@@ -30,18 +32,16 @@ def generate_xml_content():
     today_str = today.strftime("%Y-%m-%d")
     today_str_compact = today.strftime("%Y%m%d")
 
-    # Nazwa codziennego pliku z danymi (np. ceny-osiedle_sloneczne_krakow-2025-09-18.xlsx)
     daily_data_filename = f"ceny-{CONFIG['INWESTYCJA_ID']}-{today_str}.xlsx"
-    # Pełny, publiczny URL do pliku z danymi
     daily_data_url = CONFIG['DANE_BASE_URL'] + daily_data_filename
 
     # --- Główny element - <p:datasets> ---
+    # Teraz, dzięki zarejestrowaniu przestrzeni nazw, ten tag jest tworzony poprawnie.
     root = Element('p:datasets')
 
     # --- Zbiór danych - <dataset> ---
     dataset = SubElement(root, 'dataset', status='published')
-
-    # Identyfikator zbioru - stały dla całej inwestycji
+    
     SubElement(dataset, 'extIdent').text = f"dataset_{CONFIG['INWESTYCJA_ID']}"
     
     title_dataset = SubElement(dataset, 'title')
@@ -53,33 +53,27 @@ def generate_xml_content():
                     f"udostępniane zgodnie z art. 19b. ust. 1 Ustawy z dnia 20 maja 2021 r. o ochronie praw nabywcy lokalu "
                     f"mieszkalnego lub domu jednorodzinnego oraz Deweloperskim Funduszu Gwarancyjnym (Dz. U. z 2024 r. poz. 695).")
     SubElement(description_dataset, 'polish').text = desc_text_pl
-    SubElement(description_dataset, 'english').text = desc_text_pl # Używamy tego samego opisu dla uproszczenia
+    SubElement(description_dataset, 'english').text = desc_text_pl
     
     SubElement(dataset, 'url').text = CONFIG['INWESTYCJA_URL']
-    SubElement(dataset, 'categories').text = 'ECON' # Wymagana kategoria
+    SubElement(dataset, 'categories').text = 'ECON'
     
     tags = SubElement(dataset, 'tags')
     SubElement(tags, 'tag').text = 'deweloper'
 
-    # --- Częstotliwość aktualizacji - kluczowe dla obowiązku codziennego raportowania ---
     SubElement(dataset, 'updateFrequency').text = 'daily'
     
-    # --- Wymagane flagi boolean ---
     SubElement(dataset, 'hasDynamicData').text = 'false'
-    SubElement(dataset, 'hasHighValueData').text = 'true' # Wymagane
+    SubElement(dataset, 'hasHighValueData').text = 'true'
     SubElement(dataset, 'hasHighValueDataFromEuropeanCommissionList').text = 'false'
     SubElement(dataset, 'hasResearchData').text = 'false'
 
-    # --- Lista zasobów - <resources> ---
     resources = SubElement(dataset, 'resources')
     
-    # --- Zasób - <resource> - TEN ELEMENT JEST GENEROWANY CODZIENNIE ---
+    # --- Zasób - <resource> ---
     resource = SubElement(resources, 'resource', status='published')
-
-    # Unikalny identyfikator dla każdego dziennego raportu
-    SubElement(resource, 'extIdent').text = f"resource_{CONFIG['INWESTYCJA_ID']}_{today_str_compact}"
     
-    # URL do pliku z danymi na dany dzień
+    SubElement(resource, 'extIdent').text = f"resource_{CONFIG['INWESTYCJA_ID']}_{today_str_compact}"
     SubElement(resource, 'url').text = daily_data_url
 
     title_resource = SubElement(resource, 'title')
@@ -92,20 +86,18 @@ def generate_xml_content():
     SubElement(description_resource, 'polish').text = desc_res_text_pl
     SubElement(description_resource, 'english').text = desc_res_text_pl
 
-    SubElement(resource, 'availability').text = 'local' # Rekomendowane
-    SubElement(resource, 'dataDate').text = today_str # Data, której dotyczą dane
+    SubElement(resource, 'availability').text = 'local'
+    SubElement(resource, 'dataDate').text = today_str
 
     special_signs = SubElement(resource, 'specialSigns')
-    SubElement(special_signs, 'specialSign').text = 'X' # Wymagany znak umowny
+    SubElement(special_signs, 'specialSign').text = 'X'
 
-    # --- Pozostałe wymagane flagi boolean dla zasobu ---
     SubElement(resource, 'hasDynamicData').text = 'false'
     SubElement(resource, 'hasHighValueData').text = 'true'
     SubElement(resource, 'hasHighValueDataFromEuropeanCommissionList').text = 'false'
     SubElement(resource, 'hasResearchData').text = 'false'
     SubElement(resource, 'containsProtectedData').text = 'false'
 
-    # Konwersja do stringa i formatowanie dla czytelności
     xml_string = tostring(root, 'utf-8')
     parsed_string = minidom.parseString(xml_string)
     pretty_xml = parsed_string.toprettyxml(indent="  ", encoding="utf-8")
@@ -113,26 +105,19 @@ def generate_xml_content():
     return pretty_xml
 
 def calculate_md5(file_content):
-    """
-    Oblicza sumę kontrolną MD5 dla zawartości pliku.
-    """
     md5_hash = hashlib.md5(file_content).hexdigest()
     return md5_hash
 
 if __name__ == "__main__":
-    # 1. Wygeneruj zawartość pliku XML
     xml_data = generate_xml_content()
     
-    # 2. Zapisz plik XML
     xml_file_path = f"{CONFIG['XML_FILENAME']}.xml"
     with open(xml_file_path, "wb") as f:
         f.write(xml_data)
     print(f"✅ Plik XML został wygenerowany: {xml_file_path}")
 
-    # 3. Oblicz sumę kontrolną MD5 dla zapisanego pliku XML
     md5_sum = calculate_md5(xml_data)
     
-    # 4. Zapisz plik MD5
     md5_file_path = f"{CONFIG['XML_FILENAME']}.md5"
     with open(md5_file_path, "w") as f:
         f.write(md5_sum)
