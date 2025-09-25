@@ -7,13 +7,13 @@ from xml.dom import minidom
 # --- SEKCJA KONFIGURACYJNA ---
 # Uzupełnij poniższe dane zgodnie z Twoją inwestycją.
 CONFIG = {
-    "DEWELOPER_NAZWA": "Moja Firma Deweloperska S.A.",
-    "INWESTYCJA_NAZWA": "Osiedle Słoneczne",
+    "DEWELOPER_NAZWA": "MWRW Sp. z o.o.",
+    "INWESTYCJA_NAZWA": "Brzozowy Zakątek",
     "ROK_ZBIORU": "2025",
-    "INWESTYCJA_ID": "osiedle_sloneczne_krakow",
-    "INWESTYCJA_URL": "https://www.mojadeweloperka.pl/osiedle-sloneczne",
+    "INWESTYCJA_ID": "brzozowy_zakatek_kliny",
+    "INWESTYCJA_URL": "https://www.mwrw.net/kliny",
     "DANE_BASE_URL": "https://mwrw2020.github.io/dane_MWRW/",
-    "XML_FILENAME": "dane_deweloper_sloneczne",
+    "XML_FILENAME": "dane_deweloper_brzozowy",
 }
 # -----------------------------
 
