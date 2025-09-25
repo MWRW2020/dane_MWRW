@@ -8,8 +8,6 @@ on:
 
 permissions:
   contents: read
-  # UPRAWNIENIA KLUCZOWE DLA NOWEJ METODY:
-  # Nadaje uprawnienia do tworzenia i publikowania strony GitHub Pages
   pages: write
   id-token: write
 
@@ -35,23 +33,21 @@ jobs:
           TODAY_STR=$(date +'%Y-%m-%d')
           cp dane_wzor.xlsx "ceny-${INWESTYCJA_ID}-${TODAY_STR}.xlsx"
       
-      # KROK KLUCZOWY: Zamiast publikować, pakujemy pliki do "artefaktu"
+      # POPRAWKA: Aktualizacja wersji narzędzia do pakowania artefaktu z v2 na v3
       - name: Upload artifact for deployment
-        uses: actions/upload-pages-artifact@v2
+        uses: actions/upload-pages-artifact@v3
         with:
-          # Ścieżka, z której pakujemy pliki (w naszym przypadku główny katalog)
           path: .
 
   # Zadanie 2: Publikacja strony z "artefaktu"
   deploy:
-    # To zadanie jest zależne od pomyślnego ukończenia zadania 'build'
     needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      # KROK KLUCZOWY: Użycie oficjalnej akcji do publikacji z artefaktu
+      # POPRAWKA: Aktualizacja wersji narzędzia do publikacji z v2 na v4
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v4
