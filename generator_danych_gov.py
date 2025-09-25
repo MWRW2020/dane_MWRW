@@ -1,7 +1,7 @@
 import hashlib
 import uuid
 from datetime import datetime
-from xml.etree.ElementTree import Element, SubElement, tostring, register_namespace
+from xml.etree.ElementTree import Element, SubElement, tostring
 from xml.dom import minidom
 
 # --- SEKCJA KONFIGURACYJNA ---
@@ -17,13 +17,6 @@ CONFIG = {
 }
 # -----------------------------
 
-# --- POPRAWKA: Rejestracja przestrzeni nazw (namespace) dla prefiksu 'p' ---
-# To jest kluczowy element, który naprawia błąd "unbound prefix".
-# Informuje on parser XML, że prefiks 'p:' odnosi się do oficjalnego schematu dane.gov.pl.
-SCHEMA_URL = "https://www.dane.gov.pl/static/xml/otwarte_dane_latest.xsd"
-register_namespace('p', SCHEMA_URL)
-# -------------------------------------------------------------------------
-
 def generate_xml_content():
     """
     Generuje zawartość pliku XML zgodnie ze schematem dane.gov.pl dla deweloperów.
@@ -35,9 +28,15 @@ def generate_xml_content():
     daily_data_filename = f"ceny-{CONFIG['INWESTYCJA_ID']}-{today_str}.xlsx"
     daily_data_url = CONFIG['DANE_BASE_URL'] + daily_data_filename
 
-    # --- Główny element - <p:datasets> ---
-    # Teraz, dzięki zarejestrowaniu przestrzeni nazw, ten tag jest tworzony poprawnie.
-    root = Element('p:datasets')
+    # --- NOWA, POPRAWIONA WERSJA TWORZENIA GŁÓWNEGO ELEMENTU ---
+    # Definiujemy przestrzeń nazw (namespace) bezpośrednio w atrybutach elementu root.
+    # To jest kluczowa zmiana, która rozwiązuje problem "unbound prefix" w sposób uniwersalny.
+    SCHEMA_URL = "https://www.dane.gov.pl/static/xml/otwarte_dane_latest.xsd"
+    root = Element(
+        'p:datasets',
+        attrib={'xmlns:p': SCHEMA_URL}
+    )
+    # -----------------------------------------------------------------
 
     # --- Zbiór danych - <dataset> ---
     dataset = SubElement(root, 'dataset', status='published')
