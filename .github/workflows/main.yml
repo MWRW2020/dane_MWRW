@@ -3,50 +3,42 @@ name: Codzienne generowanie raportu dla dane.gov.pl
 
 # Sekcja definiująca, kiedy proces ma być uruchamiany
 on:
-  # Harmonogram uruchomienia
   schedule:
-    # Uruchamia skrypt codziennie o 23:01 UTC, co odpowiada 00:01 czasu polskiego (CET) zimą
-    # i 01:01 czasu polskiego (CEST) latem. Gwarantuje to wykonanie raportu "raz na dobę".
     - cron: '1 23 * * *'
-    
-  # Ta linia pozwala na ręczne uruchomienie procesu z interfejsu GitHub, co jest przydatne do testowania.
   workflow_dispatch:
+
+# --- POPRAWKA: Nadanie uprawnień do zapisu ---
+# Ta sekcja jest kluczowa. Nadaje ona automatowi uprawnienia do zapisu ("write")
+# w repozytorium, co jest niezbędne do publikacji plików na GitHub Pages.
+permissions:
+  contents: write
+# ---------------------------------------------
 
 # Definicja zadań do wykonania
 jobs:
   build-and-deploy:
-    # Określenie systemu operacyjnego, na którym będzie działał skrypt
     runs-on: ubuntu-latest
-
-    # Sekwencja kroków do wykonania
     steps:
-      # Krok 1: Pobranie najnowszej wersji kodu z Pana repozytorium
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Krok 2: Konfiguracja środowiska Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      # Krok 3: Uruchomienie skryptu Pythona, który generuje pliki XML i MD5
       - name: Run script to generate XML and MD5
         run: python generator_danych_gov.py
 
-      # Krok 4: Przygotowanie codziennego pliku z danymi (kopiowanie wzorca Excel)
       - name: Prepare daily data file
         run: |
           INWESTYCJA_ID=$(python -c "from generator_danych_gov import CONFIG; print(CONFIG['INWESTYCJA_ID'])")
           TODAY_STR=$(date +'%Y-%m-%d')
-          # Kopiowanie pliku wzorcowego do pliku z dzisiejszą datą
           cp dane_wzor.xlsx "ceny-${INWESTYCJA_ID}-${TODAY_STR}.xlsx"
 
-      # Krok 5: Publikacja wygenerowanych plików na stronie GitHub Pages
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: .
-          # Wykluczenie plików, których nie chcemy publikować na publicznej stronie
           exclude_assets: '.github,*.py,dane_wzor.xlsx'
